@@ -206,6 +206,131 @@ export type Database = {
         }
         Relationships: []
       }
+      order_files: {
+        Row: {
+          created_at: string
+          filename: string
+          id: string
+          order_id: string
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          filename: string
+          id?: string
+          order_id: string
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          filename?: string
+          id?: string
+          order_id?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_files_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          addons: Json | null
+          best_time: string | null
+          callback_requested: boolean | null
+          company: string | null
+          created_at: string
+          custom_thickness: string | null
+          customer_email: string
+          customer_name: string | null
+          customer_phone: string | null
+          delivery_method: string | null
+          delivery_zip: string | null
+          file_link: string | null
+          finish: string | null
+          id: string
+          material: string | null
+          material_sourcing: string | null
+          material_spec_details: string | null
+          needed_by: string | null
+          notes: string | null
+          offering: string | null
+          part_id: string | null
+          preferred_method: string | null
+          quantity: string | null
+          request_type: string
+          revision: string | null
+          status: string
+          thickness: string | null
+          updated_at: string
+        }
+        Insert: {
+          addons?: Json | null
+          best_time?: string | null
+          callback_requested?: boolean | null
+          company?: string | null
+          created_at?: string
+          custom_thickness?: string | null
+          customer_email: string
+          customer_name?: string | null
+          customer_phone?: string | null
+          delivery_method?: string | null
+          delivery_zip?: string | null
+          file_link?: string | null
+          finish?: string | null
+          id?: string
+          material?: string | null
+          material_sourcing?: string | null
+          material_spec_details?: string | null
+          needed_by?: string | null
+          notes?: string | null
+          offering?: string | null
+          part_id?: string | null
+          preferred_method?: string | null
+          quantity?: string | null
+          request_type: string
+          revision?: string | null
+          status?: string
+          thickness?: string | null
+          updated_at?: string
+        }
+        Update: {
+          addons?: Json | null
+          best_time?: string | null
+          callback_requested?: boolean | null
+          company?: string | null
+          created_at?: string
+          custom_thickness?: string | null
+          customer_email?: string
+          customer_name?: string | null
+          customer_phone?: string | null
+          delivery_method?: string | null
+          delivery_zip?: string | null
+          file_link?: string | null
+          finish?: string | null
+          id?: string
+          material?: string | null
+          material_sourcing?: string | null
+          material_spec_details?: string | null
+          needed_by?: string | null
+          notes?: string | null
+          offering?: string | null
+          part_id?: string | null
+          preferred_method?: string | null
+          quantity?: string | null
+          request_type?: string
+          revision?: string | null
+          status?: string
+          thickness?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       redirects: {
         Row: {
           created_at: string

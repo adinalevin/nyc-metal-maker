@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useUiCopy } from "@/hooks/useSupabaseData";
+import { submitOrder } from "@/lib/orderSubmission";
 
 const reorderSchema = z.object({
   email: z.string().email("Invalid email").max(255),
@@ -49,6 +50,8 @@ export function ReorderSection() {
   const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [orderId, setOrderId] = useState("");
+  const [uploadFailed, setUploadFailed] = useState(false);
 
   const {
     register,
@@ -73,10 +76,33 @@ export function ReorderSection() {
 
   const onSubmit = async (data: ReorderFormData) => {
     setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsSuccess(true);
+    setUploadFailed(false);
+    
+    const result = await submitOrder(
+      {
+        request_type: "Reorder",
+        status: "In Estimating",
+        customer_email: data.email,
+        part_id: data.partId,
+        revision: data.revision,
+        quantity: data.quantity,
+        finish: data.finish,
+        needed_by: data.neededBy,
+        delivery_method: data.deliveryMethod,
+        delivery_zip: data.deliveryZip,
+      },
+      files
+    );
+    
     setIsSubmitting(false);
-    console.log("Reorder submitted:", { ...data, files });
+    
+    if (result.success && result.orderId) {
+      setOrderId(result.orderId);
+      setUploadFailed(result.uploadFailed || false);
+      setIsSuccess(true);
+    } else {
+      console.error("Reorder submission failed:", result.error);
+    }
   };
 
   const partIdLabel = uiCopy?.label_part_id || "Part ID";
@@ -92,11 +118,20 @@ export function ReorderSection() {
               <CheckCircle2 className="w-8 h-8 text-accent" />
             </div>
             <h3 className="font-display text-2xl font-bold text-foreground mb-2">
-              Reorder Confirmed
+              Order Received
             </h3>
-            <p className="text-muted-foreground">
-              We've received your reorder request and will confirm availability shortly.
+            <p className="text-muted-foreground mb-4">
+              Status: In Estimating
             </p>
+            <div className="inline-block px-4 py-2 bg-secondary rounded-lg">
+              <span className="text-sm text-muted-foreground">Order ID: </span>
+              <span className="font-mono font-semibold text-foreground">{orderId}</span>
+            </div>
+            {uploadFailed && (
+              <p className="text-destructive text-sm mt-4">
+                Order created; file upload failed — please retry.
+              </p>
+            )}
           </div>
         </div>
       </section>
