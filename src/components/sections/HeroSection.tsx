@@ -19,9 +19,9 @@ export function HeroSection() {
       <div className="absolute inset-0 metal-texture pointer-events-none" />
       
       <div className="section-container relative z-10 py-20">
-        <div className="max-w-4xl">
+        <div className="max-w-4xl mx-auto text-center lg:text-left">
           {/* Micro line */}
-          <div className="flex flex-wrap gap-3 mb-6 text-sm text-muted-foreground">
+          <div className="flex flex-wrap justify-center lg:justify-start gap-3 mb-6 text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-secondary rounded-full">
               <FileText size={14} className="text-accent" />
               File-ready for DXF/DWG/STEP
@@ -50,7 +50,7 @@ export function HeroSection() {
           </p>
 
           {/* CTA Buttons */}
-          <div className="flex flex-wrap gap-4 mb-10">
+          <div className="flex flex-wrap justify-center lg:justify-start gap-4 mb-10">
             <Button
               variant="hero"
               size="xl"
@@ -68,7 +68,7 @@ export function HeroSection() {
           </div>
 
           {/* Trust line */}
-          <div className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground">
+          <div className="flex flex-wrap justify-center lg:justify-start items-center gap-6 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <MapPin size={16} className="text-accent" />
               <span>Brooklyn, NY 11237</span>
