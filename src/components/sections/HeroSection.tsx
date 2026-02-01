@@ -2,18 +2,27 @@ import { MapPin, Clock, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUiCopy } from "@/hooks/useSupabaseData";
 import { FallingMetalParts } from "@/components/animations/FallingMetalParts";
+import { useFormExclusion } from "@/contexts/FormExclusionContext";
 
 export function HeroSection() {
   const { data: uiCopy } = useUiCopy();
+  const { openEstimateForm, openReorderForm } = useFormExclusion();
 
-  const scrollTo = (id: string, focusUpload = false) => {
-    document.querySelector(id)?.scrollIntoView({ behavior: "smooth" });
-    if (focusUpload) {
-      // Dispatch event after scroll completes
+  const scrollToEstimate = () => {
+    openEstimateForm();
+    setTimeout(() => {
+      document.querySelector("#file-guide")?.scrollIntoView({ behavior: "smooth" });
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent("focus-estimate-upload"));
       }, 600);
-    }
+    }, 50);
+  };
+
+  const scrollToReorder = () => {
+    openReorderForm();
+    setTimeout(() => {
+      document.querySelector("#reorder")?.scrollIntoView({ behavior: "smooth" });
+    }, 50);
   };
 
   return (
@@ -59,14 +68,14 @@ export function HeroSection() {
             <Button
               variant="hero"
               size="xl"
-              onClick={() => scrollTo("#file-guide", true)}
+              onClick={scrollToEstimate}
             >
               Get an Estimate
             </Button>
             <Button
               variant="heroOutline"
               size="xl"
-              onClick={() => scrollTo("#reorder")}
+              onClick={scrollToReorder}
             >
               Reorder by Part ID
             </Button>

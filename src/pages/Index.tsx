@@ -10,6 +10,7 @@ import { ReorderSection } from "@/components/sections/ReorderSection";
 import { FAQSection } from "@/components/sections/FAQSection";
 import { ContactSection } from "@/components/sections/ContactSection";
 import { useRedirects } from "@/hooks/useSupabaseData";
+import { FormExclusionProvider } from "@/contexts/FormExclusionContext";
 
 const Index = () => {
   const location = useLocation();
@@ -39,19 +40,21 @@ const Index = () => {
   }, [location.hash]);
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main>
-        <HeroSection />
-        <WhatWeMakeSection />
-        <CustomPartsSection />
-        <FileGuideSection />
-        <ReorderSection />
-        <FAQSection />
-        <ContactSection />
-      </main>
-      <Footer />
-    </div>
+    <FormExclusionProvider>
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main>
+          <HeroSection />
+          <WhatWeMakeSection />
+          <CustomPartsSection />
+          <FileGuideSection />
+          <ReorderSection />
+          <FAQSection />
+          <ContactSection />
+        </main>
+        <Footer />
+      </div>
+    </FormExclusionProvider>
   );
 };
 
