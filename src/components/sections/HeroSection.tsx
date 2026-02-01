@@ -44,7 +44,7 @@ export function HeroSection() {
             Parts and assemblies—cut, drilled, welded, bent, and finished to your spec. 
             From one-off prototypes to production runs.{" "}
             <span className="text-foreground font-medium">
-              Standard turnaround: 2–5 business days.
+              Standard turnaround: 2–5 business days. Have a rush, we will make it happen.
             </span>
           </p>
 
