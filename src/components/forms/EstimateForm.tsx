@@ -2,12 +2,13 @@ import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Upload, X, CheckCircle2, FileText, Loader2, ChevronDown } from "lucide-react";
+import { Upload, X, CheckCircle2, FileText, Loader2, ChevronDown, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -23,6 +24,9 @@ import {
 import { useUiCopy, useOfferings } from "@/hooks/useSupabaseData";
 import { cn } from "@/lib/utils";
 
+// Offerings that require laser (we supply material for safety)
+const LASER_OFFERING_SLUGS = ["pop-flat", "proto-sprint"];
+
 const estimateSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   email: z.string().email("Invalid email").max(255),
@@ -36,6 +40,8 @@ const estimateSchema = z.object({
   thickness: z.string().optional(),
   customThickness: z.string().optional(),
   quantity: z.string().optional(),
+  materialSourcing: z.enum(["customer", "we-supply"]),
+  materialSpecDetails: z.string().max(2000).optional(),
   finish: z.string().optional(),
   neededBy: z.string().optional(),
   deliveryMethod: z.enum(["pickup", "courier", "ship"]).optional(),
@@ -109,6 +115,8 @@ export function EstimateForm() {
   const [fileLink, setFileLink] = useState("");
   const uploadAreaRef = useRef<HTMLDivElement>(null);
 
+  const [receivingGuidelinesOpen, setReceivingGuidelinesOpen] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -120,12 +128,25 @@ export function EstimateForm() {
     defaultValues: {
       callbackRequested: false,
       addons: [],
+      materialSourcing: "we-supply",
     },
   });
 
   const callbackRequested = watch("callbackRequested");
   const deliveryMethod = watch("deliveryMethod");
   const thickness = watch("thickness");
+  const selectedOffering = watch("offering");
+  const materialSourcing = watch("materialSourcing");
+
+  // Check if the selected offering includes laser work
+  const includesLaser = selectedOffering ? LASER_OFFERING_SLUGS.includes(selectedOffering) : false;
+
+  // Auto-set material sourcing to "we-supply" when laser is selected
+  useEffect(() => {
+    if (includesLaser && materialSourcing !== "we-supply") {
+      setValue("materialSourcing", "we-supply");
+    }
+  }, [includesLaser, materialSourcing, setValue]);
 
   // Auto-expand when file is uploaded
   useEffect(() => {
@@ -169,6 +190,25 @@ export function EstimateForm() {
   const onSubmit = async (data: EstimateFormData) => {
     setIsSubmitting(true);
     
+    // Build material sourcing info for notes
+    const materialSourcingText = data.materialSourcing === "customer" 
+      ? "Material sourcing: Customer supplies" 
+      : "Material sourcing: We supply";
+    const materialSpecText = data.materialSourcing === "we-supply" && data.materialSpecDetails 
+      ? `\nMaterial spec details: ${data.materialSpecDetails}` 
+      : "";
+    
+    // Append material sourcing info to notes
+    const enhancedNotes = [data.notes, materialSourcingText, materialSpecText]
+      .filter(Boolean)
+      .join("\n")
+      .trim();
+    
+    const submissionData = {
+      ...data,
+      notes: enhancedNotes,
+    };
+    
     // Simulate API call - in production, this would save to Supabase
     await new Promise((resolve) => setTimeout(resolve, 1500));
     
@@ -177,7 +217,7 @@ export function EstimateForm() {
     setIsSuccess(true);
     setIsSubmitting(false);
     
-    console.log("Estimate submitted:", { ...data, files, jobReference: ref });
+    console.log("Estimate submitted:", { ...submissionData, files, jobReference: ref });
   };
 
   if (isSuccess) {
@@ -494,6 +534,128 @@ export function EstimateForm() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Material Sourcing - Required */}
+          <div className="space-y-4 p-4 bg-secondary/50 rounded-lg">
+            <div className="space-y-3">
+              <Label className="text-base font-medium">
+                Will you be supplying the material, or would you like us to supply it? *
+              </Label>
+              <RadioGroup
+                value={materialSourcing}
+                onValueChange={(v) => setValue("materialSourcing", v as "customer" | "we-supply")}
+                className="space-y-2"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem 
+                    value="customer" 
+                    id="material-customer"
+                    disabled={includesLaser}
+                  />
+                  <Label 
+                    htmlFor="material-customer" 
+                    className={cn(
+                      "cursor-pointer",
+                      includesLaser && "text-muted-foreground cursor-not-allowed"
+                    )}
+                  >
+                    I will supply the material
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="we-supply" id="material-we-supply" />
+                  <Label htmlFor="material-we-supply" className="cursor-pointer">
+                    Please supply the material
+                  </Label>
+                </div>
+              </RadioGroup>
+              {errors.materialSourcing && (
+                <p className="text-destructive text-sm">{errors.materialSourcing.message}</p>
+              )}
+            </div>
+
+            {/* Laser Safety Note */}
+            {includesLaser && (
+              <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-md">
+                <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-foreground">
+                  Laser cutting and engraving requires approved materials for safety. For laser work, we supply the material to ensure it is safe for the laser.
+                </p>
+              </div>
+            )}
+
+            {/* Conditional: Material Spec Details (when we supply) */}
+            {materialSourcing === "we-supply" && !includesLaser && (
+              <div className="space-y-2 pt-2">
+                <Label htmlFor="materialSpecDetails">
+                  Please let us know any standards or details about the material specs for your project.
+                </Label>
+                <Textarea
+                  id="materialSpecDetails"
+                  {...register("materialSpecDetails")}
+                  className="input-industrial min-h-[80px]"
+                  placeholder="Any specific requirements..."
+                />
+                <p className="text-xs text-muted-foreground">
+                  Examples: grade/spec, finish requirements, corrosion resistance, certs/MTRs, brand preference.
+                </p>
+              </div>
+            )}
+
+            {/* Also show spec details for laser but with slightly different context */}
+            {materialSourcing === "we-supply" && includesLaser && (
+              <div className="space-y-2 pt-2">
+                <Label htmlFor="materialSpecDetails">
+                  Please let us know any standards or details about the material specs for your project.
+                </Label>
+                <Textarea
+                  id="materialSpecDetails"
+                  {...register("materialSpecDetails")}
+                  className="input-industrial min-h-[80px]"
+                  placeholder="Any specific requirements..."
+                />
+                <p className="text-xs text-muted-foreground">
+                  Examples: grade/spec, finish requirements, corrosion resistance, certs/MTRs, brand preference.
+                </p>
+              </div>
+            )}
+
+            {/* Conditional: Receiving Guidelines (when customer supplies) */}
+            {materialSourcing === "customer" && (
+              <Collapsible open={receivingGuidelinesOpen} onOpenChange={setReceivingGuidelinesOpen} className="pt-2">
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex items-center justify-between w-full p-3 bg-secondary rounded-lg hover:bg-secondary/80 transition-colors text-left"
+                  >
+                    <span className="font-medium text-sm">
+                      Receiving guidelines (we'll confirm after review)
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        "w-4 h-4 text-muted-foreground transition-transform duration-200",
+                        receivingGuidelinesOpen && "rotate-180"
+                      )}
+                    />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-2">
+                  <div className="p-3 bg-secondary/50 rounded-lg text-sm text-muted-foreground space-y-2">
+                    <p>If you're supplying material, include:</p>
+                    <ul className="list-disc list-inside space-y-1 ml-2">
+                      <li>Material spec + thickness</li>
+                      <li>Sheet/stock dimensions and quantity</li>
+                      <li>Estimated delivery date</li>
+                      <li>Any certs/MTRs if required</li>
+                    </ul>
+                    <p className="pt-2">
+                      We'll confirm receiving instructions and labeling guidelines with your estimate.
+                    </p>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
