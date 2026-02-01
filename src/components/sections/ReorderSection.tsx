@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { CheckCircle2, Upload, X, FileText, Loader2 } from "lucide-react";
+import { CheckCircle2, Upload, X, FileText, Loader2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,8 +13,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useUiCopy } from "@/hooks/useSupabaseData";
 import { submitOrder } from "@/lib/orderSubmission";
+import { useFormExclusion } from "@/contexts/FormExclusionContext";
+import { cn } from "@/lib/utils";
 
 const reorderSchema = z.object({
   email: z.string().email("Invalid email").max(255),
@@ -47,11 +54,25 @@ const finishes = [
 
 export function ReorderSection() {
   const { data: uiCopy } = useUiCopy();
+  const { activeForm, openReorderForm } = useFormExclusion();
   const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [orderId, setOrderId] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
   const [uploadFailed, setUploadFailed] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const confirmationRef = useRef<HTMLDivElement>(null);
+
+  // Sync with mutual exclusion context
+  const shouldBeOpen = activeForm === "reorder";
+  useEffect(() => {
+    if (shouldBeOpen && !isExpanded) {
+      setIsExpanded(true);
+    } else if (!shouldBeOpen && isExpanded && !isSuccess) {
+      setIsExpanded(false);
+    }
+  }, [shouldBeOpen, isExpanded, isSuccess]);
 
   const {
     register,
@@ -98,11 +119,31 @@ export function ReorderSection() {
     
     if (result.success && result.orderId) {
       setOrderId(result.orderId);
+      setCustomerEmail(data.email);
       setUploadFailed(result.uploadFailed || false);
       setIsSuccess(true);
+      
+      // Scroll to confirmation after state update
+      setTimeout(() => {
+        const confirmEl = confirmationRef.current;
+        if (confirmEl) {
+          confirmEl.scrollIntoView({ behavior: "smooth", block: "start" });
+          setTimeout(() => {
+            window.scrollBy(0, -120);
+            confirmEl.focus();
+          }, 400);
+        }
+      }, 50);
     } else {
       console.error("Reorder submission failed:", result.error);
     }
+  };
+
+  const handleAccordionToggle = () => {
+    if (!isExpanded) {
+      openReorderForm();
+    }
+    setIsExpanded(!isExpanded);
   };
 
   const partIdLabel = uiCopy?.label_part_id || "Part ID";
@@ -113,25 +154,40 @@ export function ReorderSection() {
     return (
       <section id="reorder" className="py-20 sm:py-28 bg-muted/30">
         <div className="section-container">
-          <div className="max-w-xl mx-auto text-center">
-            <div className="w-16 h-16 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle2 className="w-8 h-8 text-accent" />
+          <div className="max-w-xl mx-auto">
+            <div 
+              id="reorder-confirmation" 
+              ref={confirmationRef}
+              tabIndex={-1}
+              className="text-center py-12 focus:outline-none"
+            >
+              <div className="w-16 h-16 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle2 className="w-8 h-8 text-accent" />
+              </div>
+              <h3 className="font-display text-2xl font-bold text-foreground mb-4">
+                Thank You!
+              </h3>
+              <div className="max-w-md mx-auto space-y-4 text-left">
+                <p className="text-foreground">
+                  Your confirmation number is{" "}
+                  <span className="font-mono font-semibold">{orderId}</span>.
+                </p>
+                <p className="text-muted-foreground">
+                  We're reviewing your files now and will follow up shortly with an estimate or any questions we need to finalize it.
+                </p>
+                <p className="text-muted-foreground">
+                  We just sent a confirmation email to <span className="font-medium text-foreground">{customerEmail}</span>. Please check your inbox (and spam/promotions). If it landed in spam, mark it Not spam so we can keep you in the loop with your estimate and updates.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  If you don't see it within a few minutes, check spam/promotions.
+                </p>
+              </div>
+              {uploadFailed && (
+                <p className="text-destructive text-sm mt-4">
+                  Order created; file upload failed — please retry.
+                </p>
+              )}
             </div>
-            <h3 className="font-display text-2xl font-bold text-foreground mb-2">
-              Order Received
-            </h3>
-            <p className="text-muted-foreground mb-4">
-              Status: In Estimating
-            </p>
-            <div className="inline-block px-4 py-2 bg-secondary rounded-lg">
-              <span className="text-sm text-muted-foreground">Order ID: </span>
-              <span className="font-mono font-semibold text-foreground">{orderId}</span>
-            </div>
-            {uploadFailed && (
-              <p className="text-destructive text-sm mt-4">
-                Order created; file upload failed — please retry.
-              </p>
-            )}
           </div>
         </div>
       </section>
@@ -142,186 +198,208 @@ export function ReorderSection() {
     <section id="reorder" className="py-20 sm:py-28 bg-muted/30">
       <div className="section-container">
         <div className="max-w-2xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-10">
-            <h2 className="font-display text-3xl sm:text-4xl font-bold text-foreground mb-4">
-              {ctaLabel}
-            </h2>
-            <p className="text-muted-foreground">
-              Already have a part on file? Enter your Part ID and we'll pull your specs.
-            </p>
-          </div>
-
-          {/* Form */}
           <div className="card-industrial p-6 sm:p-8">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="reorder-email">Email *</Label>
-                <Input
-                  id="reorder-email"
-                  type="email"
-                  {...register("email")}
-                  className="input-industrial"
-                  placeholder="you@company.com"
-                />
-                {errors.email && (
-                  <p className="text-destructive text-sm">{errors.email.message}</p>
-                )}
-              </div>
-
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="partId">{partIdLabel} *</Label>
-                  <Input
-                    id="partId"
-                    {...register("partId")}
-                    className="input-industrial font-mono"
-                    placeholder="e.g., BP-2024-0142"
-                  />
-                  {errors.partId && (
-                    <p className="text-destructive text-sm">{errors.partId.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="revision">{revisionLabel}</Label>
-                  <Input
-                    id="revision"
-                    {...register("revision")}
-                    className="input-industrial font-mono"
-                    placeholder="e.g., A, B, 2"
-                  />
-                </div>
-              </div>
-
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="reorder-quantity">Quantity *</Label>
-                  <Input
-                    id="reorder-quantity"
-                    {...register("quantity")}
-                    className="input-industrial"
-                    placeholder="e.g., 25"
-                  />
-                  {errors.quantity && (
-                    <p className="text-destructive text-sm">{errors.quantity.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label>Finish</Label>
-                  <Select onValueChange={(v) => setValue("finish", v)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select finish" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {finishes.map((f) => (
-                        <SelectItem key={f} value={f}>
-                          {f}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Needed by</Label>
-                  <Input
-                    type="date"
-                    {...register("neededBy")}
-                    className="input-industrial"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Pickup / Delivery</Label>
-                  <Select onValueChange={(v) => setValue("deliveryMethod", v as any)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pickup">Pickup</SelectItem>
-                      <SelectItem value="courier">Courier</SelectItem>
-                      <SelectItem value="ship">Ship</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {(deliveryMethod === "courier" || deliveryMethod === "ship") && (
-                <div className="space-y-2">
-                  <Label>Delivery ZIP *</Label>
-                  <Input
-                    {...register("deliveryZip")}
-                    className="input-industrial max-w-xs"
-                    placeholder="e.g., 11237"
-                  />
-                  {errors.deliveryZip && (
-                    <p className="text-destructive text-sm">{errors.deliveryZip.message}</p>
-                  )}
-                </div>
-              )}
-
-              {/* Optional file upload */}
-              <div className="space-y-2">
-                <Label>Updated file (optional)</Label>
-                <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-accent transition-colors">
-                  <input
-                    type="file"
-                    multiple
-                    accept=".dxf,.dwg,.step,.stp,.pdf"
-                    onChange={handleFileChange}
-                    className="hidden"
-                    id="reorder-file-upload"
-                  />
-                  <label htmlFor="reorder-file-upload" className="cursor-pointer">
-                    <Upload className="w-6 h-6 text-muted-foreground mx-auto mb-1" />
-                    <p className="text-sm text-muted-foreground">
-                      Upload revised files if needed
+            <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+              {/* Accordion Header */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="font-display text-xl font-bold text-foreground">
+                    Reorder by Part ID
+                  </h2>
+                  {!isExpanded && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Enter Part ID + quantity. Upload updated files if needed.
                     </p>
-                  </label>
+                  )}
                 </div>
-
-                {files.length > 0 && (
-                  <ul className="space-y-2 mt-2">
-                    {files.map((file, index) => (
-                      <li
-                        key={index}
-                        className="flex items-center justify-between p-2 bg-secondary rounded"
-                      >
-                        <div className="flex items-center gap-2">
-                          <FileText size={16} className="text-muted-foreground" />
-                          <span className="text-sm truncate max-w-[200px]">{file.name}</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeFile(index)}
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          <X size={16} />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={handleAccordionToggle}
+                    className="p-2 hover:bg-secondary rounded-lg transition-colors"
+                    aria-label={isExpanded ? "Collapse form" : "Expand form"}
+                  >
+                    <ChevronDown
+                      className={cn(
+                        "w-5 h-5 text-muted-foreground transition-transform duration-200",
+                        isExpanded && "rotate-180"
+                      )}
+                    />
+                  </button>
+                </CollapsibleTrigger>
               </div>
 
-              <Button
-                type="submit"
-                variant="hero"
-                size="lg"
-                className="w-full"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  ctaLabel
-                )}
-              </Button>
-            </form>
+              <CollapsibleContent className="mt-6">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="reorder-email">Email *</Label>
+                    <Input
+                      id="reorder-email"
+                      type="email"
+                      {...register("email")}
+                      className="input-industrial"
+                      placeholder="you@company.com"
+                    />
+                    {errors.email && (
+                      <p className="text-destructive text-sm">{errors.email.message}</p>
+                    )}
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="partId">{partIdLabel} *</Label>
+                      <Input
+                        id="partId"
+                        {...register("partId")}
+                        className="input-industrial font-mono"
+                        placeholder="e.g., BP-2024-0142"
+                      />
+                      {errors.partId && (
+                        <p className="text-destructive text-sm">{errors.partId.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="revision">{revisionLabel}</Label>
+                      <Input
+                        id="revision"
+                        {...register("revision")}
+                        className="input-industrial font-mono"
+                        placeholder="e.g., A, B, 2"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="reorder-quantity">Quantity *</Label>
+                      <Input
+                        id="reorder-quantity"
+                        {...register("quantity")}
+                        className="input-industrial"
+                        placeholder="e.g., 25"
+                      />
+                      {errors.quantity && (
+                        <p className="text-destructive text-sm">{errors.quantity.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Finish</Label>
+                      <Select onValueChange={(v) => setValue("finish", v)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select finish" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {finishes.map((f) => (
+                            <SelectItem key={f} value={f}>
+                              {f}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Needed by</Label>
+                      <Input
+                        type="date"
+                        {...register("neededBy")}
+                        className="input-industrial"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Pickup / Delivery</Label>
+                      <Select onValueChange={(v) => setValue("deliveryMethod", v as any)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pickup">Pickup</SelectItem>
+                          <SelectItem value="courier">Courier</SelectItem>
+                          <SelectItem value="ship">Ship</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {(deliveryMethod === "courier" || deliveryMethod === "ship") && (
+                    <div className="space-y-2">
+                      <Label>Delivery ZIP *</Label>
+                      <Input
+                        {...register("deliveryZip")}
+                        className="input-industrial max-w-xs"
+                        placeholder="e.g., 11237"
+                      />
+                      {errors.deliveryZip && (
+                        <p className="text-destructive text-sm">{errors.deliveryZip.message}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Optional file upload */}
+                  <div className="space-y-2">
+                    <Label>Updated file (optional)</Label>
+                    <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-accent transition-colors">
+                      <input
+                        type="file"
+                        multiple
+                        accept=".dxf,.dwg,.step,.stp,.pdf"
+                        onChange={handleFileChange}
+                        className="hidden"
+                        id="reorder-file-upload"
+                      />
+                      <label htmlFor="reorder-file-upload" className="cursor-pointer">
+                        <Upload className="w-6 h-6 text-muted-foreground mx-auto mb-1" />
+                        <p className="text-sm text-muted-foreground">
+                          Upload revised files if needed
+                        </p>
+                      </label>
+                    </div>
+
+                    {files.length > 0 && (
+                      <ul className="space-y-2 mt-2">
+                        {files.map((file, index) => (
+                          <li
+                            key={index}
+                            className="flex items-center justify-between p-2 bg-secondary rounded"
+                          >
+                            <div className="flex items-center gap-2">
+                              <FileText size={16} className="text-muted-foreground" />
+                              <span className="text-sm truncate max-w-[200px]">{file.name}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeFile(index)}
+                              className="text-muted-foreground hover:text-destructive"
+                            >
+                              <X size={16} />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+
+                  <Button
+                    type="submit"
+                    variant="hero"
+                    size="lg"
+                    className="w-full"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      ctaLabel
+                    )}
+                  </Button>
+                </form>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
         </div>
       </div>

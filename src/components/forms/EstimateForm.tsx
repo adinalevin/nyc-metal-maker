@@ -24,6 +24,7 @@ import {
 import { useUiCopy, useOfferings } from "@/hooks/useSupabaseData";
 import { cn } from "@/lib/utils";
 import { submitOrder } from "@/lib/orderSubmission";
+import { useFormExclusion } from "@/contexts/FormExclusionContext";
 
 // Offerings that require laser (we supply material for safety)
 const LASER_OFFERING_SLUGS = ["pop-flat", "proto-sprint"];
@@ -103,16 +104,29 @@ const addonOptions = [
 export function EstimateForm() {
   const { data: uiCopy } = useUiCopy();
   const { data: offerings } = useOfferings();
+  const { activeForm, openEstimateForm } = useFormExclusion();
   const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [orderId, setOrderId] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
   const [uploadFailed, setUploadFailed] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [fileLink, setFileLink] = useState("");
   const uploadAreaRef = useRef<HTMLDivElement>(null);
+  const confirmationRef = useRef<HTMLDivElement>(null);
 
   const [receivingGuidelinesOpen, setReceivingGuidelinesOpen] = useState(false);
+
+  // Sync with mutual exclusion context
+  const shouldBeOpen = activeForm === "estimate";
+  useEffect(() => {
+    if (shouldBeOpen && !isExpanded) {
+      setIsExpanded(true);
+    } else if (!shouldBeOpen && isExpanded && !isSuccess) {
+      setIsExpanded(false);
+    }
+  }, [shouldBeOpen, isExpanded, isSuccess]);
 
   const {
     register,
@@ -179,6 +193,7 @@ export function EstimateForm() {
   };
 
   const handleContinue = () => {
+    openEstimateForm();
     setIsExpanded(true);
   };
 
@@ -235,8 +250,21 @@ export function EstimateForm() {
     
     if (result.success && result.orderId) {
       setOrderId(result.orderId);
+      setCustomerEmail(data.email);
       setUploadFailed(result.uploadFailed || false);
       setIsSuccess(true);
+      
+      // Scroll to confirmation after state update
+      setTimeout(() => {
+        const confirmEl = confirmationRef.current;
+        if (confirmEl) {
+          confirmEl.scrollIntoView({ behavior: "smooth", block: "start" });
+          setTimeout(() => {
+            window.scrollBy(0, -120);
+            confirmEl.focus();
+          }, 400);
+        }
+      }, 50);
     } else {
       console.error("Submission failed:", result.error);
     }
@@ -244,19 +272,32 @@ export function EstimateForm() {
 
   if (isSuccess) {
     return (
-      <div className="text-center py-12">
+      <div 
+        id="estimate-confirmation" 
+        ref={confirmationRef}
+        tabIndex={-1}
+        className="text-center py-12 focus:outline-none"
+      >
         <div className="w-16 h-16 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-6">
           <CheckCircle2 className="w-8 h-8 text-accent" />
         </div>
-        <h3 className="font-display text-2xl font-bold text-foreground mb-2">
-          Order Received
+        <h3 className="font-display text-2xl font-bold text-foreground mb-4">
+          Thank You!
         </h3>
-        <p className="text-muted-foreground mb-4">
-          Status: In Estimating
-        </p>
-        <div className="inline-block px-4 py-2 bg-secondary rounded-lg">
-          <span className="text-sm text-muted-foreground">Order ID: </span>
-          <span className="font-mono font-semibold text-foreground">{orderId}</span>
+        <div className="max-w-md mx-auto space-y-4 text-left">
+          <p className="text-foreground">
+            Your confirmation number is{" "}
+            <span className="font-mono font-semibold">{orderId}</span>.
+          </p>
+          <p className="text-muted-foreground">
+            We're reviewing your files now and will follow up shortly with an estimate or any questions we need to finalize it.
+          </p>
+          <p className="text-muted-foreground">
+            We just sent a confirmation email to <span className="font-medium text-foreground">{customerEmail}</span>. Please check your inbox (and spam/promotions). If it landed in spam, mark it Not spam so we can keep you in the loop with your estimate and updates.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            If you don't see it within a few minutes, check spam/promotions.
+          </p>
         </div>
         {uploadFailed && (
           <p className="text-destructive text-sm mt-4">
