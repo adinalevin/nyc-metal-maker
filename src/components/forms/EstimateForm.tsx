@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Upload, X, CheckCircle2, FileText, Loader2 } from "lucide-react";
+import { Upload, X, CheckCircle2, FileText, Loader2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,7 +15,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useUiCopy, useOfferings } from "@/hooks/useSupabaseData";
+import { cn } from "@/lib/utils";
 
 const estimateSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
@@ -99,6 +105,9 @@ export function EstimateForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [jobReference, setJobReference] = useState("");
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [fileLink, setFileLink] = useState("");
+  const uploadAreaRef = useRef<HTMLDivElement>(null);
 
   const {
     register,
@@ -118,6 +127,30 @@ export function EstimateForm() {
   const deliveryMethod = watch("deliveryMethod");
   const thickness = watch("thickness");
 
+  // Auto-expand when file is uploaded
+  useEffect(() => {
+    if (files.length > 0) {
+      setIsExpanded(true);
+    }
+  }, [files.length]);
+
+  // Listen for focus event from hero CTA
+  useEffect(() => {
+    const handleFocusUpload = () => {
+      uploadAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Focus the file input label after scroll
+      setTimeout(() => {
+        const fileInput = document.getElementById("file-upload");
+        if (fileInput) {
+          fileInput.focus();
+        }
+      }, 500);
+    };
+
+    window.addEventListener("focus-estimate-upload", handleFocusUpload);
+    return () => window.removeEventListener("focus-estimate-upload", handleFocusUpload);
+  }, []);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
     setFiles((prev) => [...prev, ...selectedFiles].slice(0, 10));
@@ -126,6 +159,12 @@ export function EstimateForm() {
   const removeFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
   };
+
+  const handleContinue = () => {
+    setIsExpanded(true);
+  };
+
+  const hasFileOrLink = files.length > 0 || fileLink.trim().length > 0;
 
   const onSubmit = async (data: EstimateFormData) => {
     setIsSubmitting(true);
@@ -162,262 +201,41 @@ export function EstimateForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {/* Contact Info */}
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="name">Name *</Label>
-          <Input
-            id="name"
-            {...register("name")}
-            className="input-industrial"
-            placeholder="Your name"
-          />
-          {errors.name && (
-            <p className="text-destructive text-sm">{errors.name.message}</p>
-          )}
+    <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+      {/* Header Row */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h3 className="font-display text-xl font-bold text-foreground">
+            Get an Estimate
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Upload files + a few details. We'll evaluate and follow up.
+          </p>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="email">Email *</Label>
-          <Input
-            id="email"
-            type="email"
-            {...register("email")}
-            className="input-industrial"
-            placeholder="you@company.com"
-          />
-          {errors.email && (
-            <p className="text-destructive text-sm">{errors.email.message}</p>
-          )}
-        </div>
-      </div>
-
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="company">Company</Label>
-          <Input
-            id="company"
-            {...register("company")}
-            className="input-industrial"
-            placeholder="Company name"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="phone">Phone {callbackRequested && "*"}</Label>
-          <Input
-            id="phone"
-            {...register("phone")}
-            className="input-industrial"
-            placeholder="(555) 555-1234"
-          />
-          {errors.phone && (
-            <p className="text-destructive text-sm">{errors.phone.message}</p>
-          )}
-        </div>
-      </div>
-
-      {/* Callback */}
-      <div className="space-y-4 p-4 bg-secondary/50 rounded-lg">
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="callback"
-            checked={callbackRequested}
-            onCheckedChange={(checked) => setValue("callbackRequested", !!checked)}
-          />
-          <Label htmlFor="callback" className="cursor-pointer">
-            Request a callback
-          </Label>
-        </div>
-
-        {callbackRequested && (
-          <div className="grid sm:grid-cols-2 gap-4 pt-2">
-            <div className="space-y-2">
-              <Label>Preferred method</Label>
-              <Select onValueChange={(v) => setValue("preferredMethod", v as any)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Call or text" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="call">Call</SelectItem>
-                  <SelectItem value="text">Text</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Best time</Label>
-              <Select onValueChange={(v) => setValue("bestTime", v as any)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="When to reach you" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="morning">Morning (8am-12pm)</SelectItem>
-                  <SelectItem value="midday">Midday (12pm-3pm)</SelectItem>
-                  <SelectItem value="afternoon">Afternoon (3pm-6pm)</SelectItem>
-                  <SelectItem value="asap">ASAP</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Part Details */}
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>What do you need?</Label>
-          <Select onValueChange={(v) => setValue("offering", v)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select type" />
-            </SelectTrigger>
-            <SelectContent>
-              {(offerings || []).map((o) => (
-                <SelectItem key={o.slug} value={o.slug}>
-                  {o.name}
-                </SelectItem>
-              ))}
-              <SelectItem value="other">Other / Custom</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Material</Label>
-          <Select onValueChange={(v) => setValue("material", v)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select material" />
-            </SelectTrigger>
-            <SelectContent>
-              {materials.map((m) => (
-                <SelectItem key={m} value={m}>
-                  {m}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="grid sm:grid-cols-3 gap-4">
-        <div className="space-y-2">
-          <Label>Thickness</Label>
-          <Select onValueChange={(v) => setValue("thickness", v)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select" />
-            </SelectTrigger>
-            <SelectContent>
-              {thicknesses.map((t) => (
-                <SelectItem key={t} value={t}>
-                  {t}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {thickness === "Custom" && (
-            <Input
-              {...register("customThickness")}
-              className="input-industrial mt-2"
-              placeholder="Enter thickness"
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="p-2 hover:bg-secondary rounded-lg transition-colors"
+            aria-label={isExpanded ? "Collapse form" : "Expand form"}
+          >
+            <ChevronDown
+              className={cn(
+                "w-5 h-5 text-muted-foreground transition-transform duration-200",
+                isExpanded && "rotate-180"
+              )}
             />
-          )}
-        </div>
-        <div className="space-y-2">
-          <Label>Quantity</Label>
-          <Input
-            {...register("quantity")}
-            className="input-industrial"
-            placeholder="e.g., 50"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Finish</Label>
-          <Select onValueChange={(v) => setValue("finish", v)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select" />
-            </SelectTrigger>
-            <SelectContent>
-              {finishes.map((f) => (
-                <SelectItem key={f} value={f}>
-                  {f}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+          </button>
+        </CollapsibleTrigger>
       </div>
 
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Needed by</Label>
-          <Input
-            type="date"
-            {...register("neededBy")}
-            className="input-industrial"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Pickup / Delivery</Label>
-          <Select onValueChange={(v) => setValue("deliveryMethod", v as any)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="pickup">Pickup</SelectItem>
-              <SelectItem value="courier">Courier</SelectItem>
-              <SelectItem value="ship">Ship</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      {/* Always Visible: Accepted Formats + Upload */}
+      <div className="space-y-4" ref={uploadAreaRef}>
+        {/* Accepted Formats Message */}
+        <p className="text-sm text-muted-foreground">
+          Accepted: DXF, DWG, STEP, PDF. If you only have a pencil sketch, upload a JPG/PNG or PDF and we'll evaluate it.
+        </p>
 
-      {(deliveryMethod === "courier" || deliveryMethod === "ship") && (
-        <div className="space-y-2">
-          <Label>Delivery ZIP *</Label>
-          <Input
-            {...register("deliveryZip")}
-            className="input-industrial max-w-xs"
-            placeholder="e.g., 11237"
-          />
-        </div>
-      )}
-
-      {/* Add-ons */}
-      <div className="space-y-3">
-        <Label>Add-ons</Label>
-        <div className="grid sm:grid-cols-2 gap-2">
-          {addonOptions.map((addon) => (
-            <div key={addon.id} className="flex items-center space-x-2">
-              <Checkbox
-                id={addon.id}
-                onCheckedChange={(checked) => {
-                  const current = watch("addons");
-                  if (checked) {
-                    setValue("addons", [...current, addon.id]);
-                  } else {
-                    setValue("addons", current.filter((a) => a !== addon.id));
-                  }
-                }}
-              />
-              <Label htmlFor={addon.id} className="cursor-pointer text-sm">
-                {addon.label}
-              </Label>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Notes */}
-      <div className="space-y-2">
-        <Label htmlFor="notes">Notes</Label>
-        <Textarea
-          id="notes"
-          {...register("notes")}
-          className="input-industrial min-h-[100px]"
-          placeholder="Any additional details or special requirements..."
-        />
-      </div>
-
-      {/* File Upload */}
-      <div className="space-y-3">
-        <Label>Upload Files</Label>
+        {/* File Upload */}
         <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-accent transition-colors">
           <input
             type="file"
@@ -438,6 +256,7 @@ export function EstimateForm() {
           </label>
         </div>
 
+        {/* Uploaded Files List */}
         {files.length > 0 && (
           <ul className="space-y-2">
             {files.map((file, index) => (
@@ -461,36 +280,312 @@ export function EstimateForm() {
           </ul>
         )}
 
-        <div className="text-center text-sm text-muted-foreground">or</div>
-
+        {/* File Link */}
         <div className="space-y-2">
-          <Label htmlFor="fileLink">File Link</Label>
+          <Label htmlFor="fileLink" className="text-sm text-muted-foreground">
+            Or add a link instead
+          </Label>
           <Input
             id="fileLink"
-            {...register("fileLink")}
+            value={fileLink}
+            onChange={(e) => {
+              setFileLink(e.target.value);
+              setValue("fileLink", e.target.value);
+            }}
             className="input-industrial"
             placeholder="https://drive.google.com/..."
           />
         </div>
+
+        {/* Continue Button (only when collapsed) */}
+        {!isExpanded && (
+          <Button
+            type="button"
+            variant="hero"
+            size="lg"
+            className="w-full"
+            disabled={!hasFileOrLink}
+            onClick={handleContinue}
+          >
+            Continue
+          </Button>
+        )}
       </div>
 
-      {/* Submit */}
-      <Button
-        type="submit"
-        variant="hero"
-        size="lg"
-        className="w-full"
-        disabled={isSubmitting}
-      >
-        {isSubmitting ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Submitting...
-          </>
-        ) : (
-          uiCopy?.cta_get_estimate || "Get an Estimate"
-        )}
-      </Button>
-    </form>
+      {/* Expandable Form Fields */}
+      <CollapsibleContent className="mt-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          {/* Contact Info */}
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name *</Label>
+              <Input
+                id="name"
+                {...register("name")}
+                className="input-industrial"
+                placeholder="Your name"
+              />
+              {errors.name && (
+                <p className="text-destructive text-sm">{errors.name.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                type="email"
+                {...register("email")}
+                className="input-industrial"
+                placeholder="you@company.com"
+              />
+              {errors.email && (
+                <p className="text-destructive text-sm">{errors.email.message}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="company">Company</Label>
+              <Input
+                id="company"
+                {...register("company")}
+                className="input-industrial"
+                placeholder="Company name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone {callbackRequested && "*"}</Label>
+              <Input
+                id="phone"
+                {...register("phone")}
+                className="input-industrial"
+                placeholder="(555) 555-1234"
+              />
+              {errors.phone && (
+                <p className="text-destructive text-sm">{errors.phone.message}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Callback */}
+          <div className="space-y-4 p-4 bg-secondary/50 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="callback"
+                checked={callbackRequested}
+                onCheckedChange={(checked) => setValue("callbackRequested", !!checked)}
+              />
+              <Label htmlFor="callback" className="cursor-pointer">
+                Request a callback
+              </Label>
+            </div>
+
+            {callbackRequested && (
+              <div className="grid sm:grid-cols-2 gap-4 pt-2">
+                <div className="space-y-2">
+                  <Label>Preferred method</Label>
+                  <Select onValueChange={(v) => setValue("preferredMethod", v as any)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Call or text" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="call">Call</SelectItem>
+                      <SelectItem value="text">Text</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Best time</Label>
+                  <Select onValueChange={(v) => setValue("bestTime", v as any)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="When to reach you" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="morning">Morning (8am-12pm)</SelectItem>
+                      <SelectItem value="midday">Midday (12pm-3pm)</SelectItem>
+                      <SelectItem value="afternoon">Afternoon (3pm-6pm)</SelectItem>
+                      <SelectItem value="asap">ASAP</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Part Details */}
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>What do you need?</Label>
+              <Select onValueChange={(v) => setValue("offering", v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(offerings || []).map((o) => (
+                    <SelectItem key={o.slug} value={o.slug}>
+                      {o.name}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="other">Other / Custom</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Material</Label>
+              <Select onValueChange={(v) => setValue("material", v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select material" />
+                </SelectTrigger>
+                <SelectContent>
+                  {materials.map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {m}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Thickness</Label>
+              <Select onValueChange={(v) => setValue("thickness", v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  {thicknesses.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {thickness === "Custom" && (
+                <Input
+                  {...register("customThickness")}
+                  className="input-industrial mt-2"
+                  placeholder="Enter thickness"
+                />
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Quantity</Label>
+              <Input
+                {...register("quantity")}
+                className="input-industrial"
+                placeholder="e.g., 50"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Finish</Label>
+              <Select onValueChange={(v) => setValue("finish", v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  {finishes.map((f) => (
+                    <SelectItem key={f} value={f}>
+                      {f}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Needed by</Label>
+              <Input
+                type="date"
+                {...register("neededBy")}
+                className="input-industrial"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Pickup / Delivery</Label>
+              <Select onValueChange={(v) => setValue("deliveryMethod", v as any)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pickup">Pickup</SelectItem>
+                  <SelectItem value="courier">Courier</SelectItem>
+                  <SelectItem value="ship">Ship</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {(deliveryMethod === "courier" || deliveryMethod === "ship") && (
+            <div className="space-y-2">
+              <Label>Delivery ZIP *</Label>
+              <Input
+                {...register("deliveryZip")}
+                className="input-industrial max-w-xs"
+                placeholder="e.g., 11237"
+              />
+            </div>
+          )}
+
+          {/* Add-ons */}
+          <div className="space-y-3">
+            <Label>Add-ons</Label>
+            <div className="grid sm:grid-cols-2 gap-2">
+              {addonOptions.map((addon) => (
+                <div key={addon.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={addon.id}
+                    onCheckedChange={(checked) => {
+                      const current = watch("addons");
+                      if (checked) {
+                        setValue("addons", [...current, addon.id]);
+                      } else {
+                        setValue("addons", current.filter((a) => a !== addon.id));
+                      }
+                    }}
+                  />
+                  <Label htmlFor={addon.id} className="cursor-pointer text-sm">
+                    {addon.label}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea
+              id="notes"
+              {...register("notes")}
+              className="input-industrial min-h-[100px]"
+              placeholder="Any additional details or special requirements..."
+            />
+          </div>
+
+          {/* Submit */}
+          <Button
+            type="submit"
+            variant="hero"
+            size="lg"
+            className="w-full"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Submitting...
+              </>
+            ) : (
+              uiCopy?.cta_get_estimate || "Get an Estimate"
+            )}
+          </Button>
+        </form>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }

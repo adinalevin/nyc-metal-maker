@@ -6,8 +6,14 @@ import { FallingMetalParts } from "@/components/animations/FallingMetalParts";
 export function HeroSection() {
   const { data: uiCopy } = useUiCopy();
 
-  const scrollTo = (id: string) => {
+  const scrollTo = (id: string, focusUpload = false) => {
     document.querySelector(id)?.scrollIntoView({ behavior: "smooth" });
+    if (focusUpload) {
+      // Dispatch event after scroll completes
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("focus-estimate-upload"));
+      }, 600);
+    }
   };
 
   return (
@@ -53,7 +59,7 @@ export function HeroSection() {
             <Button
               variant="hero"
               size="xl"
-              onClick={() => scrollTo("#file-guide")}
+              onClick={() => scrollTo("#file-guide", true)}
             >
               Get an Estimate
             </Button>
