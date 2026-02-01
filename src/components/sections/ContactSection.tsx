@@ -23,10 +23,10 @@ export function ContactSection() {
               </div>
               <h3 className="font-semibold text-foreground mb-2">Call Us</h3>
               <a
-                href="tel:+17185551234"
+                href="tel:+16467419757"
                 className="text-muted-foreground hover:text-accent transition-colors"
               >
-                (718) 555-1234
+                (646) 741-9757
               </a>
               <p className="text-sm text-muted-foreground mt-1">Mon–Fri, 7am–5pm</p>
             </div>
@@ -38,10 +38,10 @@ export function ContactSection() {
               </div>
               <h3 className="font-semibold text-foreground mb-2">Text Us</h3>
               <a
-                href="sms:+17185551234"
+                href="sms:+16467419757"
                 className="text-muted-foreground hover:text-accent transition-colors"
               >
-                (718) 555-1234
+                (646) 741-9757
               </a>
               <p className="text-sm text-muted-foreground mt-1">Quick questions welcome</p>
             </div>
