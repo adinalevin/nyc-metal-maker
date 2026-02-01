@@ -175,15 +175,13 @@ export function ReorderSection() {
                 <p className="text-muted-foreground">
                   We're reviewing your files now and will follow up shortly with an estimate or any questions we need to finalize it.
                 </p>
-                <div className="text-muted-foreground space-y-2">
-                  <p>
-                    We just sent a confirmation email to{" "}
-                    <span className="font-medium text-foreground">{customerEmail}</span>.
-                  </p>
-                  <p className="text-sm">
-                    Check your inbox — if you don't see it, look in spam/promotions and mark it <span className="italic">Not spam</span> so future updates reach you.
-                  </p>
-                </div>
+                <p className="text-muted-foreground">
+                  We just sent a confirmation email to{" "}
+                  <span className="font-medium text-foreground">{customerEmail}</span>.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Check your inbox — if you don't see it, look in spam/promotions and mark it <span className="italic">Not spam</span>.
+                </p>
               </div>
               {uploadFailed && (
                 <p className="text-destructive text-sm mt-4">
