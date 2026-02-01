@@ -24,10 +24,10 @@ export function HeroSection() {
           <div className="flex flex-wrap justify-center lg:justify-start gap-3 mb-6 text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-secondary rounded-full">
               <FileText size={14} className="text-accent" />
-              File-ready for DXF/DWG/STEP
+              DXF/DWG/STEP/PDF
             </span>
             <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-secondary rounded-full">
-              Revit exports supported
+              Sketches accepted
             </span>
             <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-secondary rounded-full">
               Rush lane available
@@ -36,16 +36,15 @@ export function HeroSection() {
 
           {/* Main headline */}
           <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground mb-6 leading-tight">
-            Metal Parts for{" "}
-            <span className="text-gradient-steel">NYC Construction</span>
+            Custom Metal Parts in NYC
           </h1>
 
           {/* Subheadline */}
-          <p className="text-lg sm:text-xl text-muted-foreground mb-8 leading-relaxed max-w-2xl">
-            Connection plates, custom brackets, and mounting hardware—cut clean, deburred, 
-            packed out, and ready for install.{" "}
+          <p className="text-lg sm:text-xl text-muted-foreground mb-8 leading-relaxed max-w-2xl mx-auto lg:mx-0">
+            Parts and assemblies—cut, drilled, welded, bent, and finished to your spec. 
+            From one-off prototypes to production runs.{" "}
             <span className="text-foreground font-medium">
-              Typical turnaround: 2–5 business days.
+              Standard turnaround: 2–5 business days.
             </span>
           </p>
 
@@ -56,14 +55,14 @@ export function HeroSection() {
               size="xl"
               onClick={() => scrollTo("#file-guide")}
             >
-              {uiCopy?.cta_get_estimate || "Get an Estimate"}
+              Get an Estimate
             </Button>
             <Button
               variant="heroOutline"
               size="xl"
               onClick={() => scrollTo("#reorder")}
             >
-              {uiCopy?.cta_reorder || "Reorder a Part"}
+              Reorder by Part ID
             </Button>
           </div>
 
