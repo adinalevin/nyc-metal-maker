@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/collapsible";
 import { useUiCopy, useOfferings } from "@/hooks/useSupabaseData";
 import { cn } from "@/lib/utils";
+import { submitOrder } from "@/lib/orderSubmission";
 
 // Offerings that require laser (we supply material for safety)
 const LASER_OFFERING_SLUGS = ["pop-flat", "proto-sprint"];
@@ -98,11 +99,6 @@ const addonOptions = [
   { id: "welding", label: "Welding / fit-up" },
 ];
 
-function generateJobReference(): string {
-  const year = new Date().getFullYear();
-  const num = Math.floor(1000 + Math.random() * 9000);
-  return `MP-${year}-${num}`;
-}
 
 export function EstimateForm() {
   const { data: uiCopy } = useUiCopy();
@@ -110,7 +106,8 @@ export function EstimateForm() {
   const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [jobReference, setJobReference] = useState("");
+  const [orderId, setOrderId] = useState("");
+  const [uploadFailed, setUploadFailed] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [fileLink, setFileLink] = useState("");
   const uploadAreaRef = useRef<HTMLDivElement>(null);
@@ -189,6 +186,7 @@ export function EstimateForm() {
 
   const onSubmit = async (data: EstimateFormData) => {
     setIsSubmitting(true);
+    setUploadFailed(false);
     
     // Build material sourcing info for notes
     const materialSourcingText = data.materialSourcing === "customer" 
@@ -204,20 +202,44 @@ export function EstimateForm() {
       .join("\n")
       .trim();
     
-    const submissionData = {
-      ...data,
-      notes: enhancedNotes,
-    };
+    const result = await submitOrder(
+      {
+        request_type: "Estimate",
+        status: "In Estimating",
+        customer_email: data.email,
+        customer_name: data.name,
+        company: data.company,
+        customer_phone: data.phone,
+        offering: data.offering,
+        material: data.material,
+        thickness: data.thickness,
+        custom_thickness: data.customThickness,
+        quantity: data.quantity,
+        finish: data.finish,
+        material_sourcing: data.materialSourcing,
+        material_spec_details: data.materialSpecDetails,
+        addons: data.addons,
+        callback_requested: data.callbackRequested,
+        preferred_method: data.preferredMethod,
+        best_time: data.bestTime,
+        needed_by: data.neededBy,
+        delivery_method: data.deliveryMethod,
+        delivery_zip: data.deliveryZip,
+        file_link: fileLink || data.fileLink,
+        notes: enhancedNotes,
+      },
+      files
+    );
     
-    // Simulate API call - in production, this would save to Supabase
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    
-    const ref = generateJobReference();
-    setJobReference(ref);
-    setIsSuccess(true);
     setIsSubmitting(false);
     
-    console.log("Estimate submitted:", { ...submissionData, files, jobReference: ref });
+    if (result.success && result.orderId) {
+      setOrderId(result.orderId);
+      setUploadFailed(result.uploadFailed || false);
+      setIsSuccess(true);
+    } else {
+      console.error("Submission failed:", result.error);
+    }
   };
 
   if (isSuccess) {
@@ -227,15 +249,20 @@ export function EstimateForm() {
           <CheckCircle2 className="w-8 h-8 text-accent" />
         </div>
         <h3 className="font-display text-2xl font-bold text-foreground mb-2">
-          Thanks — your request is Received
+          Order Received
         </h3>
         <p className="text-muted-foreground mb-4">
-          We're evaluating your files and specs now.
+          Status: In Estimating
         </p>
         <div className="inline-block px-4 py-2 bg-secondary rounded-lg">
-          <span className="text-sm text-muted-foreground">Job Reference: </span>
-          <span className="font-mono font-semibold text-foreground">{jobReference}</span>
+          <span className="text-sm text-muted-foreground">Order ID: </span>
+          <span className="font-mono font-semibold text-foreground">{orderId}</span>
         </div>
+        {uploadFailed && (
+          <p className="text-destructive text-sm mt-4">
+            Order created; file upload failed — please retry.
+          </p>
+        )}
       </div>
     );
   }
