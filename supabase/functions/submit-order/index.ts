@@ -247,7 +247,11 @@ Deno.serve(async (req) => {
     if (orderError || !order) {
       console.error("Order insert error:", orderError);
       return new Response(
-        JSON.stringify({ success: false, error: "Failed to create order" }),
+        JSON.stringify({
+          success: false,
+          error: "Failed to create order",
+          details: orderError ?? null
+        }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
