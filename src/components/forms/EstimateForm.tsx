@@ -115,6 +115,7 @@ export function EstimateForm() {
   const [emailSent, setEmailSent] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [fileLink, setFileLink] = useState("");
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const uploadAreaRef = useRef<HTMLDivElement>(null);
   const confirmationRef = useRef<HTMLDivElement>(null);
 
@@ -204,6 +205,7 @@ export function EstimateForm() {
   const onSubmit = async (data: EstimateFormData) => {
     setIsSubmitting(true);
     setUploadFailed(false);
+    setSubmitError(null);
     
     // Build material sourcing info for notes
     const materialSourcingText = data.materialSourcing === "customer" 
@@ -251,6 +253,7 @@ export function EstimateForm() {
     setIsSubmitting(false);
     
     if (result.success && result.orderId) {
+      setSubmitError(null);
       setOrderId(result.orderId);
       setOrderCode(result.orderCode || result.orderId);
       setCustomerEmail(data.email);
@@ -270,6 +273,8 @@ export function EstimateForm() {
         }
       }, 50);
     } else {
+      // Show error - do NOT proceed with file upload or email
+      setSubmitError(result.error || "An unknown error occurred");
       console.error("Submission failed:", result.error);
     }
   };
@@ -830,6 +835,23 @@ export function EstimateForm() {
               uiCopy?.cta_get_estimate || "Get an Estimate"
             )}
           </Button>
+
+          {/* Error Banner */}
+          {submitError && (
+            <div className="mt-4 p-4 rounded-lg bg-destructive/10 border border-destructive/20">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-destructive">
+                    Submission failed — could not save your request. Please try again.
+                  </p>
+                  <p className="text-xs text-muted-foreground font-mono break-all">
+                    Debug: {submitError}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </form>
       </CollapsibleContent>
     </Collapsible>

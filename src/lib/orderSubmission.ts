@@ -52,6 +52,14 @@ export async function submitOrder(
   files: File[]
 ): Promise<SubmissionResult> {
   try {
+    // Log Supabase URL for debugging
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    console.log("[DEBUG] Supabase URL being used:", supabaseUrl);
+    console.log("[DEBUG] Submitting order with data:", { 
+      request_type: data.request_type, 
+      customer_email: data.customer_email 
+    });
+
     // Call edge function for order creation (with rate limiting and server-side validation)
     const { data: orderResult, error: orderError } = await supabase.functions.invoke(
       "submit-order",
@@ -86,15 +94,24 @@ export async function submitOrder(
       }
     );
 
+    console.log("[DEBUG] Edge function response:", { orderResult, orderError });
+
     if (orderError) {
-      console.error("Order submission error:", orderError);
-      return { success: false, error: orderError.message || "Failed to create order" };
+      const errorMsg = orderError.message || JSON.stringify(orderError) || "Failed to create order";
+      console.error("[ERROR] Order submission failed:", errorMsg);
+      return { success: false, error: errorMsg };
     }
 
     if (!orderResult?.success || !orderResult?.orderId) {
-      console.error("Order creation failed:", orderResult?.error);
-      return { success: false, error: orderResult?.error || "Failed to create order" };
+      const errorMsg = orderResult?.error || JSON.stringify(orderResult) || "Failed to create order - no order ID returned";
+      console.error("[ERROR] Order creation failed:", errorMsg);
+      return { success: false, error: errorMsg };
     }
+
+    console.log("[DEBUG] Order created successfully:", { 
+      orderId: orderResult.orderId, 
+      orderCode: orderResult.orderCode 
+    });
 
     const orderId = orderResult.orderId;
     const orderCode = orderResult.orderCode;

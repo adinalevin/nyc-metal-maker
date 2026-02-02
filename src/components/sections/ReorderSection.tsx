@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { CheckCircle2, Upload, X, FileText, Loader2, ChevronDown } from "lucide-react";
+import { CheckCircle2, Upload, X, FileText, Loader2, ChevronDown, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -64,6 +64,7 @@ export function ReorderSection() {
   const [uploadFailed, setUploadFailed] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const confirmationRef = useRef<HTMLDivElement>(null);
 
   // Sync with mutual exclusion context
@@ -100,6 +101,7 @@ export function ReorderSection() {
   const onSubmit = async (data: ReorderFormData) => {
     setIsSubmitting(true);
     setUploadFailed(false);
+    setSubmitError(null);
     
     const result = await submitOrder(
       {
@@ -120,6 +122,7 @@ export function ReorderSection() {
     setIsSubmitting(false);
     
     if (result.success && result.orderId) {
+      setSubmitError(null);
       setOrderId(result.orderId);
       setOrderCode(result.orderCode || result.orderId);
       setCustomerEmail(data.email);
@@ -139,6 +142,8 @@ export function ReorderSection() {
         }
       }, 50);
     } else {
+      // Show error - do NOT proceed with file upload or email
+      setSubmitError(result.error || "An unknown error occurred");
       console.error("Reorder submission failed:", result.error);
     }
   };
@@ -413,6 +418,23 @@ export function ReorderSection() {
                       ctaLabel
                     )}
                   </Button>
+
+                  {/* Error Banner */}
+                  {submitError && (
+                    <div className="mt-4 p-4 rounded-lg bg-destructive/10 border border-destructive/20">
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-destructive">
+                            Submission failed — could not save your request. Please try again.
+                          </p>
+                          <p className="text-xs text-muted-foreground font-mono break-all">
+                            Debug: {submitError}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </form>
               </CollapsibleContent>
             </Collapsible>
