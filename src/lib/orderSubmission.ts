@@ -31,6 +31,7 @@ interface OrderInsertData {
 interface SubmissionResult {
   success: boolean;
   orderId?: string;
+  orderCode?: string;
   uploadFailed?: boolean;
   error?: string;
 }
@@ -70,7 +71,7 @@ export async function submitOrder(
         file_link: data.file_link || null,
         notes: data.notes || null,
       })
-      .select("id")
+      .select("id, order_code")
       .single();
 
     if (orderError || !order) {
@@ -79,6 +80,7 @@ export async function submitOrder(
     }
 
     const orderId = order.id;
+    const orderCode = order.order_code;
     let uploadFailed = false;
 
     // Upload files to storage and create order_files records
@@ -116,6 +118,7 @@ export async function submitOrder(
     return {
       success: true,
       orderId,
+      orderCode,
       uploadFailed,
     };
   } catch (err) {

@@ -260,6 +260,7 @@ export type Database = {
           needed_by: string | null
           notes: string | null
           offering: string | null
+          order_code: string | null
           part_id: string | null
           preferred_method: string | null
           quantity: string | null
@@ -290,6 +291,7 @@ export type Database = {
           needed_by?: string | null
           notes?: string | null
           offering?: string | null
+          order_code?: string | null
           part_id?: string | null
           preferred_method?: string | null
           quantity?: string | null
@@ -320,6 +322,7 @@ export type Database = {
           needed_by?: string | null
           notes?: string | null
           offering?: string | null
+          order_code?: string | null
           part_id?: string | null
           preferred_method?: string | null
           quantity?: string | null
