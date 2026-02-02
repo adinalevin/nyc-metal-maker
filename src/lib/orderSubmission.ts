@@ -36,80 +36,93 @@ interface SubmissionResult {
   error?: string;
 }
 
+// Convert file to base64 for edge function upload
+async function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+  });
+}
+
 export async function submitOrder(
   data: OrderInsertData,
   files: File[]
 ): Promise<SubmissionResult> {
   try {
-    // Insert order into database
-    const { data: order, error: orderError } = await (supabase as any)
-      .from("orders")
-      .insert({
-        request_type: data.request_type,
-        status: data.status,
-        customer_email: data.customer_email,
-        customer_name: data.customer_name || null,
-        company: data.company || null,
-        customer_phone: data.customer_phone || null,
-        offering: data.offering || null,
-        material: data.material || null,
-        thickness: data.thickness || null,
-        custom_thickness: data.custom_thickness || null,
-        quantity: data.quantity || null,
-        finish: data.finish || null,
-        material_sourcing: data.material_sourcing || null,
-        material_spec_details: data.material_spec_details || null,
-        addons: data.addons && data.addons.length > 0 ? data.addons : null,
-        callback_requested: data.callback_requested || false,
-        preferred_method: data.preferred_method || null,
-        best_time: data.best_time || null,
-        part_id: data.part_id || null,
-        revision: data.revision || null,
-        needed_by: data.needed_by || null,
-        delivery_method: data.delivery_method || null,
-        delivery_zip: data.delivery_zip || null,
-        file_link: data.file_link || null,
-        notes: data.notes || null,
-      })
-      .select("id, order_code")
-      .single();
+    // Call edge function for order creation (with rate limiting and server-side validation)
+    const { data: orderResult, error: orderError } = await supabase.functions.invoke(
+      "submit-order",
+      {
+        body: {
+          request_type: data.request_type,
+          status: data.status,
+          customer_email: data.customer_email,
+          customer_name: data.customer_name || null,
+          company: data.company || null,
+          customer_phone: data.customer_phone || null,
+          offering: data.offering || null,
+          material: data.material || null,
+          thickness: data.thickness || null,
+          custom_thickness: data.custom_thickness || null,
+          quantity: data.quantity || null,
+          finish: data.finish || null,
+          material_sourcing: data.material_sourcing || null,
+          material_spec_details: data.material_spec_details || null,
+          addons: data.addons && data.addons.length > 0 ? data.addons : null,
+          callback_requested: data.callback_requested || false,
+          preferred_method: data.preferred_method || null,
+          best_time: data.best_time || null,
+          part_id: data.part_id || null,
+          revision: data.revision || null,
+          needed_by: data.needed_by || null,
+          delivery_method: data.delivery_method || null,
+          delivery_zip: data.delivery_zip || null,
+          file_link: data.file_link || null,
+          notes: data.notes || null,
+        },
+      }
+    );
 
-    if (orderError || !order) {
-      console.error("Order insert error:", orderError);
-      return { success: false, error: orderError?.message || "Failed to create order" };
+    if (orderError) {
+      console.error("Order submission error:", orderError);
+      return { success: false, error: orderError.message || "Failed to create order" };
     }
 
-    const orderId = order.id;
-    const orderCode = order.order_code;
+    if (!orderResult?.success || !orderResult?.orderId) {
+      console.error("Order creation failed:", orderResult?.error);
+      return { success: false, error: orderResult?.error || "Failed to create order" };
+    }
+
+    const orderId = orderResult.orderId;
+    const orderCode = orderResult.orderCode;
     let uploadFailed = false;
 
-    // Upload files to storage and create order_files records
+    // Upload files via edge function
     if (files.length > 0) {
       for (const file of files) {
-        const storagePath = `orders/${orderId}/${file.name}`;
+        try {
+          const fileData = await fileToBase64(file);
+          
+          const { data: uploadResult, error: uploadError } = await supabase.functions.invoke(
+            "upload-order-file",
+            {
+              body: {
+                orderId,
+                filename: file.name,
+                fileData,
+                contentType: file.type,
+              },
+            }
+          );
 
-        // Upload to storage
-        const { error: uploadError } = await supabase.storage
-          .from("job-uploads")
-          .upload(storagePath, file);
-
-        if (uploadError) {
-          console.error("File upload error:", uploadError);
-          uploadFailed = true;
-          continue;
-        }
-
-        // Insert order_files record
-        const { error: fileRecordError } = await (supabase as any)
-          .from("order_files")
-          .insert({
-            order_id: orderId,
-            filename: file.name,
-            storage_path: storagePath,
-          });
-
-        if (fileRecordError) {
-          console.error("Order file record error:", fileRecordError);
+          if (uploadError || !uploadResult?.success) {
+            console.error("File upload error:", uploadError || uploadResult?.error);
+            uploadFailed = true;
+          }
+        } catch (err) {
+          console.error("File processing error:", err);
           uploadFailed = true;
         }
       }

@@ -238,6 +238,30 @@ export type Database = {
           },
         ]
       }
+      order_rate_limits: {
+        Row: {
+          created_at: string | null
+          id: string
+          identifier: string
+          submission_count: number | null
+          window_start: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          identifier: string
+          submission_count?: number | null
+          window_start?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          identifier?: string
+          submission_count?: number | null
+          window_start?: string | null
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           addons: Json | null
