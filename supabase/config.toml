@@ -1,1 +1,7 @@
 project_id = "itlaebjtakhcpioloaun"
+
+[functions.submit-order]
+verify_jwt = false
+
+[functions.upload-order-file]
+verify_jwt = false
