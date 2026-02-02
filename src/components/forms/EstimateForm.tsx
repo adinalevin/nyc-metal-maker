@@ -284,32 +284,25 @@ export function EstimateForm() {
           <CheckCircle2 className="w-8 h-8 text-accent" />
         </div>
         <h3 className="font-display text-2xl font-bold text-foreground mb-4">
-          Thank You!
+          Estimate request received
         </h3>
         <div className="max-w-md mx-auto space-y-4 text-left">
-          <div className="space-y-1">
-            <p className="text-foreground text-lg">
-              Confirmation number:{" "}
-              <span className="font-mono font-bold">{orderCode}</span>
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Internal ID: <span className="font-mono">{orderId}</span>
-            </p>
-          </div>
+          <p className="text-foreground text-lg">
+            Request ID:{" "}
+            <span className="font-mono font-bold">{orderCode}</span>
+          </p>
           <p className="text-muted-foreground">
             We're reviewing your files now and will follow up shortly with an estimate or any questions we need to finalize it.
           </p>
           <p className="text-muted-foreground">
-            We just sent a confirmation email to{" "}
+            We'll email you shortly at{" "}
             <span className="font-medium text-foreground">{customerEmail}</span>.
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Check your inbox — if you don't see it, look in spam/promotions and mark it <span className="italic">Not spam</span>.
+            {" "}Please check spam/promotions and mark <span className="italic">Not spam</span> so you receive your estimate and updates.
           </p>
         </div>
         {uploadFailed && (
           <p className="text-destructive text-sm mt-4">
-            Order created; file upload failed — please retry.
+            Estimate created; file upload failed — please retry.
           </p>
         )}
       </div>
