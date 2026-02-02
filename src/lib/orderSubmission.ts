@@ -33,6 +33,7 @@ interface SubmissionResult {
   orderId?: string;
   orderCode?: string;
   uploadFailed?: boolean;
+  emailSent?: boolean;
   error?: string;
 }
 
@@ -98,6 +99,7 @@ export async function submitOrder(
     const orderId = orderResult.orderId;
     const orderCode = orderResult.orderCode;
     let uploadFailed = false;
+    const uploadedFilenames: string[] = [];
 
     // Upload files via edge function
     if (files.length > 0) {
@@ -120,6 +122,8 @@ export async function submitOrder(
           if (uploadError || !uploadResult?.success) {
             console.error("File upload error:", uploadError || uploadResult?.error);
             uploadFailed = true;
+          } else {
+            uploadedFilenames.push(file.name);
           }
         } catch (err) {
           console.error("File processing error:", err);
@@ -128,11 +132,38 @@ export async function submitOrder(
       }
     }
 
+    // Send confirmation email via edge function (non-blocking)
+    let emailSent = false;
+    try {
+      const { data: emailResult, error: emailError } = await supabase.functions.invoke(
+        "send-order-received",
+        {
+          body: {
+            order_id: orderId,
+            order_code: orderCode,
+            customer_email: data.customer_email,
+            customer_name: data.customer_name || null,
+            request_type: data.request_type,
+            filenames: uploadedFilenames,
+          },
+        }
+      );
+
+      if (!emailError && emailResult?.ok) {
+        emailSent = true;
+      } else {
+        console.error("Email notification error:", emailError || emailResult?.error);
+      }
+    } catch (err) {
+      console.error("Email notification error:", err);
+    }
+
     return {
       success: true,
       orderId,
       orderCode,
       uploadFailed,
+      emailSent,
     };
   } catch (err) {
     console.error("Order submission error:", err);

@@ -62,6 +62,7 @@ export function ReorderSection() {
   const [orderCode, setOrderCode] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [uploadFailed, setUploadFailed] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const confirmationRef = useRef<HTMLDivElement>(null);
 
@@ -123,6 +124,7 @@ export function ReorderSection() {
       setOrderCode(result.orderCode || result.orderId);
       setCustomerEmail(data.email);
       setUploadFailed(result.uploadFailed || false);
+      setEmailSent(result.emailSent || false);
       setIsSuccess(true);
       
       // Scroll to confirmation after state update
@@ -170,29 +172,35 @@ export function ReorderSection() {
                 Thank You!
               </h3>
               <div className="max-w-md mx-auto space-y-4 text-left">
-                <div className="space-y-1">
-                  <p className="text-foreground text-lg">
-                    Confirmation number:{" "}
-                    <span className="font-mono font-bold">{orderCode}</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Internal ID: <span className="font-mono">{orderId}</span>
-                  </p>
-                </div>
-                <p className="text-muted-foreground">
-                  We're reviewing your files now and will follow up shortly with an estimate or any questions we need to finalize it.
+                <p className="text-foreground text-lg">
+                  Request ID:{" "}
+                  <span className="font-mono font-bold">{orderCode}</span>
                 </p>
                 <p className="text-muted-foreground">
-                  We just sent a confirmation email to{" "}
-                  <span className="font-medium text-foreground">{customerEmail}</span>.
+                  We're reviewing your reorder now and will follow up shortly with confirmation or any questions.
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  Check your inbox — if you don't see it, look in spam/promotions and mark it <span className="italic">Not spam</span>.
-                </p>
+                {emailSent ? (
+                  <p className="text-muted-foreground">
+                    We just sent a confirmation email to{" "}
+                    <span className="font-medium text-foreground">{customerEmail}</span>.
+                    {" "}Check your inbox — if you don't see it, look in spam/promotions and mark it <span className="italic">Not spam</span>.
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground">
+                    We'll email you shortly at{" "}
+                    <span className="font-medium text-foreground">{customerEmail}</span>.
+                    {" "}Please check spam/promotions and mark <span className="italic">Not spam</span> so you receive updates.
+                  </p>
+                )}
               </div>
               {uploadFailed && (
                 <p className="text-destructive text-sm mt-4">
-                  Order created; file upload failed — please retry.
+                  Reorder created; file upload failed — please retry.
+                </p>
+              )}
+              {!emailSent && !uploadFailed && (
+                <p className="text-muted-foreground/70 text-sm mt-4">
+                  Confirmation email is pending. Please check spam/promotions in a few minutes.
                 </p>
               )}
             </div>

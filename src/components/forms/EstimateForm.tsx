@@ -112,6 +112,7 @@ export function EstimateForm() {
   const [orderCode, setOrderCode] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [uploadFailed, setUploadFailed] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [fileLink, setFileLink] = useState("");
   const uploadAreaRef = useRef<HTMLDivElement>(null);
@@ -254,6 +255,7 @@ export function EstimateForm() {
       setOrderCode(result.orderCode || result.orderId);
       setCustomerEmail(data.email);
       setUploadFailed(result.uploadFailed || false);
+      setEmailSent(result.emailSent || false);
       setIsSuccess(true);
       
       // Scroll to confirmation after state update
@@ -294,15 +296,28 @@ export function EstimateForm() {
           <p className="text-muted-foreground">
             We're reviewing your files now and will follow up shortly with an estimate or any questions we need to finalize it.
           </p>
-          <p className="text-muted-foreground">
-            We'll email you shortly at{" "}
-            <span className="font-medium text-foreground">{customerEmail}</span>.
-            {" "}Please check spam/promotions and mark <span className="italic">Not spam</span> so you receive your estimate and updates.
-          </p>
+          {emailSent ? (
+            <p className="text-muted-foreground">
+              We just sent a confirmation email to{" "}
+              <span className="font-medium text-foreground">{customerEmail}</span>.
+              {" "}Check your inbox — if you don't see it, look in spam/promotions and mark it <span className="italic">Not spam</span>.
+            </p>
+          ) : (
+            <p className="text-muted-foreground">
+              We'll email you shortly at{" "}
+              <span className="font-medium text-foreground">{customerEmail}</span>.
+              {" "}Please check spam/promotions and mark <span className="italic">Not spam</span> so you receive your estimate and updates.
+            </p>
+          )}
         </div>
         {uploadFailed && (
           <p className="text-destructive text-sm mt-4">
             Estimate created; file upload failed — please retry.
+          </p>
+        )}
+        {!emailSent && !uploadFailed && (
+          <p className="text-muted-foreground/70 text-sm mt-4">
+            Confirmation email is pending. Please check spam/promotions in a few minutes.
           </p>
         )}
       </div>
