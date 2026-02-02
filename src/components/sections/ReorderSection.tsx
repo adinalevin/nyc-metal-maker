@@ -59,6 +59,7 @@ export function ReorderSection() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [orderId, setOrderId] = useState("");
+  const [orderCode, setOrderCode] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [uploadFailed, setUploadFailed] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -119,6 +120,7 @@ export function ReorderSection() {
     
     if (result.success && result.orderId) {
       setOrderId(result.orderId);
+      setOrderCode(result.orderCode || result.orderId);
       setCustomerEmail(data.email);
       setUploadFailed(result.uploadFailed || false);
       setIsSuccess(true);
@@ -168,10 +170,15 @@ export function ReorderSection() {
                 Thank You!
               </h3>
               <div className="max-w-md mx-auto space-y-4 text-left">
-                <p className="text-foreground">
-                  Your confirmation number is{" "}
-                  <span className="font-mono font-semibold">{orderId}</span>.
-                </p>
+                <div className="space-y-1">
+                  <p className="text-foreground text-lg">
+                    Confirmation number:{" "}
+                    <span className="font-mono font-bold">{orderCode}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Internal ID: <span className="font-mono">{orderId}</span>
+                  </p>
+                </div>
                 <p className="text-muted-foreground">
                   We're reviewing your files now and will follow up shortly with an estimate or any questions we need to finalize it.
                 </p>
