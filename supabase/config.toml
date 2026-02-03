@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.upload-order-file]
 verify_jwt = false
+
+[functions.send-order-received]
+verify_jwt = false
