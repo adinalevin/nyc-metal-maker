@@ -10,7 +10,8 @@ const corsHeaders = {
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_FILES_PER_ORDER = 10;
 const ALLOWED_EXTENSIONS = [".dxf", ".dwg", ".step", ".stp", ".pdf", ".jpg", ".jpeg", ".png"];
-const FILENAME_REGEX = /^[a-zA-Z0-9._\-\s()]+$/;
+// Allow common filename characters but block dangerous ones
+const FILENAME_REGEX = /^[a-zA-Z0-9._\-\s()\[\]{}+#@!&',]+$/;
 
 interface UploadRequest {
   orderId: string;
