@@ -206,76 +206,91 @@ export function EstimateForm() {
     setIsSubmitting(true);
     setUploadFailed(false);
     setSubmitError(null);
-    
-    // Build material sourcing info for notes
-    const materialSourcingText = data.materialSourcing === "customer" 
-      ? "Material sourcing: Customer supplies" 
-      : "Material sourcing: We supply";
-    const materialSpecText = data.materialSourcing === "we-supply" && data.materialSpecDetails 
-      ? `\nMaterial spec details: ${data.materialSpecDetails}` 
-      : "";
-    
-    // Append material sourcing info to notes
-    const enhancedNotes = [data.notes, materialSourcingText, materialSpecText]
-      .filter(Boolean)
-      .join("\n")
-      .trim();
-    
-    const result = await submitOrder(
-      {
-        request_type: "Estimate",
-        status: "In Estimating",
-        customer_email: data.email,
-        customer_name: data.name,
-        company: data.company,
-        customer_phone: data.phone,
-        offering: data.offering,
-        material: data.material,
-        thickness: data.thickness,
-        custom_thickness: data.customThickness,
-        quantity: data.quantity,
-        finish: data.finish,
-        material_sourcing: data.materialSourcing,
-        material_spec_details: data.materialSpecDetails,
-        addons: data.addons,
-        callback_requested: data.callbackRequested,
-        preferred_method: data.preferredMethod,
-        best_time: data.bestTime,
-        needed_by: data.neededBy,
-        delivery_method: data.deliveryMethod,
-        delivery_zip: data.deliveryZip,
-        file_link: fileLink || data.fileLink,
-        notes: enhancedNotes,
-      },
-      files
-    );
-    
-    setIsSubmitting(false);
-    
-    if (result.success && result.orderId) {
-      setSubmitError(null);
-      setOrderId(result.orderId);
-      setOrderCode(result.orderCode || result.orderId);
-      setCustomerEmail(data.email);
-      setUploadFailed(result.uploadFailed || false);
-      setEmailSent(result.emailSent || false);
-      setIsSuccess(true);
-      
-      // Scroll to confirmation after state update
-      setTimeout(() => {
-        const confirmEl = confirmationRef.current;
-        if (confirmEl) {
-          confirmEl.scrollIntoView({ behavior: "smooth", block: "start" });
-          setTimeout(() => {
-            window.scrollBy(0, -120);
-            confirmEl.focus();
-          }, 400);
-        }
-      }, 50);
-    } else {
-      // Show error - do NOT proceed with file upload or email
-      setSubmitError(result.error || "An unknown error occurred");
-      console.error("Submission failed:", result.error);
+
+    console.log("[EstimateForm] submit start", {
+      filesCount: files.length,
+      hasFileLink: Boolean((fileLink || data.fileLink || "").trim()),
+      email: data.email,
+    });
+
+    try {
+      // Build material sourcing info for notes
+      const materialSourcingText =
+        data.materialSourcing === "customer"
+          ? "Material sourcing: Customer supplies"
+          : "Material sourcing: We supply";
+      const materialSpecText =
+        data.materialSourcing === "we-supply" && data.materialSpecDetails
+          ? `\nMaterial spec details: ${data.materialSpecDetails}`
+          : "";
+
+      // Append material sourcing info to notes
+      const enhancedNotes = [data.notes, materialSourcingText, materialSpecText]
+        .filter(Boolean)
+        .join("\n")
+        .trim();
+
+      const result = await submitOrder(
+        {
+          request_type: "Estimate",
+          status: "In Estimating",
+          customer_email: data.email,
+          customer_name: data.name,
+          company: data.company,
+          customer_phone: data.phone,
+          offering: data.offering,
+          material: data.material,
+          thickness: data.thickness,
+          custom_thickness: data.customThickness,
+          quantity: data.quantity,
+          finish: data.finish,
+          material_sourcing: data.materialSourcing,
+          material_spec_details: data.materialSpecDetails,
+          addons: data.addons,
+          callback_requested: data.callbackRequested,
+          preferred_method: data.preferredMethod,
+          best_time: data.bestTime,
+          needed_by: data.neededBy,
+          delivery_method: data.deliveryMethod,
+          delivery_zip: data.deliveryZip,
+          file_link: fileLink || data.fileLink,
+          notes: enhancedNotes,
+        },
+        files
+      );
+
+      console.log("[EstimateForm] submit result", result);
+
+      if (result.success && result.orderId) {
+        setSubmitError(null);
+        setOrderId(result.orderId);
+        setOrderCode(result.orderCode || result.orderId);
+        setCustomerEmail(data.email);
+        setUploadFailed(result.uploadFailed || false);
+        setEmailSent(result.emailSent || false);
+        setIsSuccess(true);
+
+        // Scroll to confirmation after state update
+        setTimeout(() => {
+          const confirmEl = confirmationRef.current;
+          if (confirmEl) {
+            confirmEl.scrollIntoView({ behavior: "smooth", block: "start" });
+            setTimeout(() => {
+              window.scrollBy(0, -120);
+              confirmEl.focus();
+            }, 400);
+          }
+        }, 50);
+      } else {
+        // Show error - do NOT proceed with file upload or email
+        setSubmitError(result.error || "An unknown error occurred");
+        console.error("[EstimateForm] submission failed", result);
+      }
+    } catch (err) {
+      console.error("[EstimateForm] unexpected submit crash", err);
+      setSubmitError("An unexpected error occurred");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -424,6 +439,9 @@ export function EstimateForm() {
             className="input-industrial"
             placeholder="https://drive.google.com/..."
           />
+          {errors.fileLink && (
+            <p className="text-destructive text-sm">{errors.fileLink.message}</p>
+          )}
         </div>
 
         {/* Continue Button (only when collapsed) */}
@@ -443,7 +461,14 @@ export function EstimateForm() {
 
       {/* Expandable Form Fields */}
       <CollapsibleContent className="mt-6">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form
+          onSubmit={handleSubmit(onSubmit, (formErrors) => {
+            // This catches client-side validation blocks (e.g., invalid URL) that would otherwise
+            // result in "nothing happens" and zero backend invocations.
+            console.error("[EstimateForm] validation blocked submit", formErrors);
+          })}
+          className="space-y-6"
+        >
           {/* Contact Info */}
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="space-y-2">
