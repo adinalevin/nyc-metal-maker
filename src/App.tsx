@@ -8,6 +8,7 @@ import OfferingDetail from "./pages/OfferingDetail";
 import ServiceDetail from "./pages/ServiceDetail";
 import StatusPortal from "./pages/StatusPortal";
 import AdminPortal from "./pages/AdminPortal";
+import DebugPage from "./pages/DebugPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/services/:slug" element={<ServiceDetail />} />
           <Route path="/status" element={<StatusPortal />} />
           <Route path="/admin" element={<AdminPortal />} />
+          <Route path="/debug" element={<DebugPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
