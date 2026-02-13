@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, FileText, Download, Send, Loader2, Clock, MessageSquare, Phone, Mail } from "lucide-react";
+import { ArrowLeft, FileText, Download, Send, Loader2, Clock, MessageSquare, Phone, Mail, CheckCircle, Edit3 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -52,11 +53,210 @@ function StatusTimeline({ currentStatus }: { currentStatus: string }) {
   );
 }
 
+function AcceptanceConfirmation({ orderCode }: { orderCode: string }) {
+  return (
+    <div className="text-center py-12">
+      <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+      <h2 className="font-display text-2xl font-bold text-foreground mb-2">Order Confirmed!</h2>
+      <p className="text-muted-foreground mb-2">
+        Your order <span className="font-semibold text-foreground">{orderCode}</span> has been accepted and payment received.
+      </p>
+      <p className="text-sm text-muted-foreground mb-6">
+        We'll begin working on your order shortly. You can track progress on this page.
+      </p>
+      <Button asChild>
+        <Link to="/status">Back to My Requests</Link>
+      </Button>
+    </div>
+  );
+}
+
+interface QuoteAcceptancePanelProps {
+  order: any;
+  quote: any;
+  onAccepted: () => void;
+}
+
+function QuoteAcceptancePanel({ order, quote, onAccepted }: QuoteAcceptancePanelProps) {
+  const queryClient = useQueryClient();
+  const [isEditing, setIsEditing] = useState(false);
+  const [quantity, setQuantity] = useState(order.quantity || "");
+  const [neededBy, setNeededBy] = useState(order.needed_by || "");
+  const [notes, setNotes] = useState(order.notes || "");
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const updateOrder = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("orders")
+        .update({
+          quantity,
+          needed_by: neededBy || null,
+          notes: notes || null,
+        })
+        .eq("id", order.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["order-detail", order.id] });
+      setIsEditing(false);
+      toast({ title: "Details updated" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const handleAcceptAndPay = async () => {
+    setIsProcessing(true);
+    try {
+      // TODO: Replace with Stripe checkout session
+      // For now, simulate payment processing
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      // Update quote status to accepted
+      const { error: quoteError } = await (supabase as any)
+        .from("quotes")
+        .update({ status: "accepted" })
+        .eq("id", quote.id);
+      if (quoteError) throw quoteError;
+
+      // Update order status to Payment Received
+      const { error: orderError } = await supabase
+        .from("orders")
+        .update({ status: "Payment Received" })
+        .eq("id", order.id);
+      if (orderError) throw orderError;
+
+      queryClient.invalidateQueries({ queryKey: ["order-detail", order.id] });
+      queryClient.invalidateQueries({ queryKey: ["order-quotes", order.id] });
+      toast({ title: "Payment received!", description: "Your order is confirmed." });
+      onAccepted();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <div className="card-industrial p-5 mb-6 border-2 border-accent/30">
+      <h2 className="font-display font-semibold text-foreground mb-1">Review & Accept Estimate</h2>
+      <p className="text-sm text-muted-foreground mb-4">
+        Review your order details below. You can make changes before accepting.
+      </p>
+
+      {/* Editable fields */}
+      <div className="space-y-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm font-medium text-foreground mb-1 block">Quantity</label>
+            {isEditing ? (
+              <Input
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                placeholder="e.g. 50"
+              />
+            ) : (
+              <p className="text-sm text-foreground bg-muted rounded-md px-3 py-2">
+                {quantity || "—"}
+              </p>
+            )}
+          </div>
+          <div>
+            <label className="text-sm font-medium text-foreground mb-1 block">Needed By</label>
+            {isEditing ? (
+              <Input
+                type="date"
+                value={neededBy}
+                onChange={(e) => setNeededBy(e.target.value)}
+              />
+            ) : (
+              <p className="text-sm text-foreground bg-muted rounded-md px-3 py-2">
+                {neededBy ? new Date(neededBy).toLocaleDateString() : "—"}
+              </p>
+            )}
+          </div>
+        </div>
+        <div>
+          <label className="text-sm font-medium text-foreground mb-1 block">Notes</label>
+          {isEditing ? (
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Any special instructions or changes..."
+              rows={3}
+            />
+          ) : (
+            <p className="text-sm text-foreground bg-muted rounded-md px-3 py-2 min-h-[2.5rem]">
+              {notes || "—"}
+            </p>
+          )}
+        </div>
+
+        {isEditing ? (
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => updateOrder.mutate()} disabled={updateOrder.isPending}>
+              Save Changes
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setIsEditing(false)}>
+              Cancel
+            </Button>
+          </div>
+        ) : (
+          <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
+            <Edit3 className="w-3 h-3 mr-1" /> Edit Details
+          </Button>
+        )}
+      </div>
+
+      {/* Quote summary + Accept */}
+      <div className="border-t border-border pt-4">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-sm text-muted-foreground">Estimate Total</p>
+            <span className="text-2xl font-bold text-foreground">
+              ${(quote.amount_cents / 100).toFixed(2)}
+            </span>
+            {quote.description && (
+              <p className="text-sm text-muted-foreground">{quote.description}</p>
+            )}
+            {quote.valid_until && (
+              <p className="text-xs text-muted-foreground">
+                Valid until {new Date(quote.valid_until).toLocaleDateString()}
+              </p>
+            )}
+          </div>
+        </div>
+        <Button
+          onClick={handleAcceptAndPay}
+          disabled={isProcessing}
+          className="w-full"
+          size="lg"
+        >
+          {isProcessing ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              Processing Payment...
+            </>
+          ) : (
+            `Accept & Pay $${(quote.amount_cents / 100).toFixed(2)}`
+          )}
+        </Button>
+        <p className="text-xs text-muted-foreground text-center mt-2">
+          Secure payment powered by Stripe (coming soon — placeholder for now)
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function OrderDetail() {
   const { id } = useParams<{ id: string }>();
   const { user, loading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const [newMessage, setNewMessage] = useState("");
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   const { data: order, isLoading: orderLoading } = useQuery({
     queryKey: ["order-detail", id],
@@ -188,6 +388,24 @@ export default function OrderDetail() {
     );
   }
 
+  // Find the latest pending quote for acceptance
+  const pendingQuote = quotes?.find((q: any) => q.status === "pending");
+  const canAccept = order.status === "Estimate Sent" && pendingQuote;
+
+  if (showConfirmation) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main className="pt-32 pb-20">
+          <div className="section-container max-w-3xl mx-auto">
+            <AcceptanceConfirmation orderCode={order.order_code || "Request"} />
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -213,6 +431,15 @@ export default function OrderDetail() {
             <StatusTimeline currentStatus={order.status} />
           </div>
 
+          {/* Accept & Pay panel (shown when quote is pending and status is Estimate Sent) */}
+          {canAccept && (
+            <QuoteAcceptancePanel
+              order={order}
+              quote={pendingQuote}
+              onAccepted={() => setShowConfirmation(true)}
+            />
+          )}
+
           {/* Specs summary */}
           <div className="card-industrial p-5 mb-6">
             <h2 className="font-display font-semibold text-foreground mb-3">Details</h2>
@@ -228,8 +455,8 @@ export default function OrderDetail() {
             </dl>
           </div>
 
-          {/* Quote */}
-          {quotes && quotes.length > 0 && (
+          {/* Quote (only show if not in acceptance mode) */}
+          {quotes && quotes.length > 0 && !canAccept && (
             <div className="card-industrial p-5 mb-6">
               <h2 className="font-display font-semibold text-foreground mb-3">Estimate</h2>
               {quotes.map((q: any) => (
@@ -239,7 +466,7 @@ export default function OrderDetail() {
                     {q.description && <p className="text-sm text-muted-foreground">{q.description}</p>}
                     {q.valid_until && <p className="text-xs text-muted-foreground">Valid until {new Date(q.valid_until).toLocaleDateString()}</p>}
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${q.status === "pending" ? "bg-muted text-foreground" : "bg-secondary text-secondary-foreground"}`}>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${q.status === "pending" ? "bg-muted text-foreground" : q.status === "accepted" ? "bg-green-100 text-green-800" : "bg-secondary text-secondary-foreground"}`}>
                     {q.status}
                   </span>
                 </div>
