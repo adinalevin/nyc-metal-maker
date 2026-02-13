@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, User } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useUiCopy } from "@/hooks/useSupabaseData";
 import { cn } from "@/lib/utils";
@@ -79,6 +80,10 @@ export function Header() {
 
           {/* CTA Button */}
           <div className="hidden md:flex items-center gap-3">
+            <Link to="/status" className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-muted/50">
+              <User className="w-4 h-4" />
+              My Requests
+            </Link>
             <Button
               variant="hero"
               size="default"
@@ -112,7 +117,15 @@ export function Header() {
                   </button>
                 </li>
               ))}
-              <li className="pt-2">
+              <li className="pt-2 space-y-2">
+                <Link
+                  to="/status"
+                  className="flex items-center gap-2 w-full px-4 py-3 text-base font-medium text-foreground hover:bg-muted/50 rounded-md transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <User className="w-4 h-4" />
+                  My Requests
+                </Link>
                 <Button
                   variant="hero"
                   className="w-full"
