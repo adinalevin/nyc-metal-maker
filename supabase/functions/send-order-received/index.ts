@@ -124,7 +124,29 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log("Email sent successfully:", data);
+    console.log("Customer email sent successfully:", data);
+
+    // Send team notification
+    const teamEmail = Deno.env.get("TEAM_NOTIFICATION_EMAIL");
+    if (teamEmail) {
+      const teamHtml = `
+        <h2>New ${requestType}: ${body.order_code}</h2>
+        <p><strong>Customer:</strong> ${customerName} (${body.customer_email})</p>
+        ${filenames.length > 0 ? `<p><strong>Files:</strong> ${filenames.join(", ")}</p>` : ""}
+        <p><a href="https://nyc-metal-maker.lovable.app/admin">View in Admin Portal</a></p>
+      `;
+      const { error: teamError } = await resend.emails.send({
+        from: resendFrom,
+        to: [teamEmail],
+        subject: `[New ${requestType}] ${body.order_code} - ${customerName}`,
+        html: teamHtml,
+      });
+      if (teamError) {
+        console.error("Team notification error:", teamError);
+      } else {
+        console.log("Team notification sent to:", teamEmail);
+      }
+    }
 
     return new Response(
       JSON.stringify({ ok: true, emailId: data?.id }),
