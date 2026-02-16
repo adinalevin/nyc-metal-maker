@@ -1,4 +1,5 @@
 import { MapPin, Phone, Mail } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -63,7 +64,10 @@ export function Footer() {
         <div className="border-t border-primary-foreground/20 pt-6">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-primary-foreground/60">
             <p>© {currentYear} Metal Parts NYC by Collab. All rights reserved.</p>
-            <p>NYC + 100 miles • Pickup + courier delivery</p>
+            <div className="flex items-center gap-4">
+              <p>NYC + 100 miles • Pickup + courier delivery</p>
+              <Link to="/admin" className="hover:text-primary-foreground transition-colors">Team Login</Link>
+            </div>
           </div>
         </div>
       </div>
