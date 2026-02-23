@@ -35,7 +35,14 @@ function MagicLinkForm() {
     const { error } = await signInWithMagicLink(email);
     setLoading(false);
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      const isRateLimit = error.message?.toLowerCase().includes("rate") || error.status === 429;
+      toast({
+        title: isRateLimit ? "Please wait" : "Error",
+        description: isRateLimit
+          ? "Too many login attempts. Please wait 60 seconds before trying again."
+          : error.message,
+        variant: "destructive",
+      });
     } else {
       setSent(true);
     }
